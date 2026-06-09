@@ -19,15 +19,41 @@ using namespace std;
 // --- File-local helpers (not part of the public interface) ---
 
 static string gen_acc_number(const string& branch_code) {
+    // Use the highest existing numeric suffix + 1 (not a record count) so the
+    // generated number stays unique even after accounts have been closed.
     ifstream file("customers.dat", ios::binary);
-    int count = 0;
+    int max_num = 10000;
     if (file) {
         CustomerRecord c;
-        while (file.read((char*)&c, sizeof(c))) count++;
+        while (file.read((char*)&c, sizeof(c))) {
+            string acc = c.account_number;
+            size_t pos = acc.rfind('-');
+            if (pos != string::npos) {
+                try {
+                    int n = stoi(acc.substr(pos + 1));
+                    if (n > max_num) max_num = n;
+                } catch (...) { /* ignore non-numeric suffixes */ }
+            }
+        }
         file.close();
     }
-    int num = 10000 + count + 1;
+    int num = max_num + 1;
     return "ACC-" + branch_code + "-" + to_string(num);
+}
+
+// True if the candidate 5-digit PIN is already used by an existing customer.
+static bool pin_in_use(const string& pin) {
+    ifstream file("customers.dat", ios::binary);
+    if (!file) return false;
+    CustomerRecord c;
+    while (file.read((char*)&c, sizeof(c))) {
+        if (simple_encrypt(c.encrypted_pin) == pin) {
+            file.close();
+            return true;
+        }
+    }
+    file.close();
+    return false;
 }
 
 static bool update_customer(const CustomerRecord& record) {
@@ -181,7 +207,8 @@ void register_customer(const string& branch_code, const string& teller_id) {
     }
     c.balance = dep;
 
-    string pin = gen_pin();
+    string pin;
+    do { pin = gen_pin(); } while (pin_in_use(pin));  // ensure a unique 5-digit PIN
     string enc = simple_encrypt(pin);
     strcpy(c.encrypted_pin, enc.c_str());
     c.failed_attempts = 0;
@@ -376,8 +403,11 @@ void transfer(CustomerRecord& from, const string& branch_code) {
     // try-catch validation/error handling (assignment req 1.3.3)
     try {
         string to_acc = get_line("Recipient account number: ");
-        CustomerRecord to;
 
+        if (to_acc == string(from.account_number))
+            throw runtime_error("Cannot transfer to the same account.");
+
+        CustomerRecord to;
         if (!find_customer(to_acc, to)) throw runtime_error("Recipient not found.");
 
         double amt = get_double("Amount to transfer: R");
@@ -389,11 +419,17 @@ void transfer(CustomerRecord& from, const string& branch_code) {
         if (from.account_type == 2) available += from.overdraft_limit;
         if (amt > available) throw runtime_error("Not enough money.");
 
-        from.balance -= amt;
+        // Apply atomically: credit the recipient first, then debit the sender.
+        // If the sender update fails, roll the recipient back so money is never lost.
         to.balance += amt;
+        if (!update_customer(to)) throw runtime_error("Transfer failed.");
 
-        if (!update_customer(from) || !update_customer(to))
+        from.balance -= amt;
+        if (!update_customer(from)) {
+            to.balance -= amt;
+            update_customer(to);  // rollback recipient
             throw runtime_error("Transfer failed.");
+        }
 
         log_transaction(from.account_number, "TRANSFER OUT", amt, from.balance, branch_code);
         log_transaction(to.account_number, "TRANSFER IN", amt, to.balance, to.branch_code);

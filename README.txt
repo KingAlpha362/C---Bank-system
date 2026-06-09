@@ -199,7 +199,7 @@ All transactions include:
 Rules:
 
 * Fixed Deposit → penalty if withdrawn early
-* Student → daily transaction limit
+* Student → per-transaction limit
 * Cheque → overdraft allowed
 
 All transactions are saved in transactions.dat

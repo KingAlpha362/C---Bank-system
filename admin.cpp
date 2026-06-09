@@ -84,7 +84,10 @@ void apply_interest() {
     int count = 0;
     try {
         while (infile.read((char*)&c, sizeof(c))) {
-            if (c.account_type == 1) {
+            // Guard: only eligible accounts that have NOT already been credited
+            // today receive interest, so re-running the option cannot double-pay.
+            bool already_done = (string(c.last_interest_date) == today);
+            if (c.account_type == 1 && !already_done) {
                 double interest = c.balance * (sav_rate / 100.0);
                 c.balance += interest;
                 strcpy(c.last_interest_date, today.c_str());
@@ -92,7 +95,7 @@ void apply_interest() {
                 cout << "Interest added to " << c.account_number << ": R" << fixed << setprecision(2) << interest << "\n";
                 log_transaction(c.account_number, "INTEREST", interest, c.balance, c.branch_code);
                 update_branch_stats(c.branch_code, interest, 0);
-            } else if (c.account_type == 3) {
+            } else if (c.account_type == 3 && !already_done) {
                 double interest = c.balance * (fix_rate / 100.0);
                 c.balance += interest;
                 strcpy(c.last_interest_date, today.c_str());
