@@ -156,7 +156,12 @@ void register_customer(const string& branch_code, const string& teller_id) {
 
     c.account_type = choice;
 
-    string name = get_line("Full Name: ");
+    string name;
+    do {
+        name = get_line("Full Name (First Name and Surname): ");
+        if (!validate_full_name(name)) cout << "Please enter both a first name and a surname.\n";
+    } while (!validate_full_name(name));
+
     string said;
     do {
         said = get_line("SA ID (13 digits): ");

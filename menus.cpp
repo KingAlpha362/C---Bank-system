@@ -47,21 +47,25 @@ static void customer_menu(CustomerRecord& c) {
     cout << "Logged out.\n";
 }
 
+static void admin_menu();  // forward declaration (defined below)
+
 static void teller_menu(const string& branch_code, const string& teller_id) {
     int choice;
     do {
         cout << "\n=== TELLER MENU (Branch " << branch_code << ") ===\n";
         cout << "1. Register Customer\n";
         cout << "2. Assisted Transaction\n";
-        cout << "3. Search Customer\n";
+        cout << "3. Search Customer (my branch)\n";
         cout << "4. Edit Customer Profile\n";
         cout << "5. Close Account\n";
         cout << "6. View All Branches\n";
         cout << "7. View Branch Details\n";
-        cout << "8. Reports\n";
-        cout << "9. Change Password\n";
-        cout << "10. Reset Customer PIN\n";
-        cout << "11. Logout\n";
+        cout << "8. Inter-Branch Comparison\n";
+        cout << "9. Reports (my branch)\n";
+        cout << "10. Change My Password\n";
+        cout << "11. Reset Customer PIN\n";
+        cout << "12. Admin / System Operations\n";
+        cout << "13. Logout\n";
 
         choice = get_int("Choice: ");
 
@@ -107,16 +111,20 @@ static void teller_menu(const string& branch_code, const string& teller_id) {
         } else if (choice == 7) {
             view_branch_details();
         } else if (choice == 8) {
+            compare_branches();
+        } else if (choice == 9) {
             int r = get_int("1. Daily Transactions\n2. Customer Summary\n3. Branch Performance\nChoice: ");
             if (r == 1) daily_transaction_report(branch_code);
             else if (r == 2) customer_summary_report(branch_code);
             else if (r == 3) branch_performance_report(branch_code);
-        } else if (choice == 9) {
-            change_teller_password(teller_id);
         } else if (choice == 10) {
+            change_teller_password(teller_id);
+        } else if (choice == 11) {
             reset_customer_pin(teller_id, branch_code);
+        } else if (choice == 12) {
+            admin_menu();
         }
-    } while (choice != 11);
+    } while (choice != 13);
 
     log_system_event(teller_id, "Logged out");
 }
@@ -124,63 +132,53 @@ static void teller_menu(const string& branch_code, const string& teller_id) {
 static void admin_menu() {
     int choice;
     do {
-        cout << "\n=== ADMIN MENU ===\n";
-        cout << "1. Add Branch\n";
-        cout << "2. Remove Branch\n";
-        cout << "3. View System Logs\n";
-        cout << "4. Apply Interest\n";
-        cout << "5. Backup Data\n";
-        cout << "6. Recover Data\n";
-        cout << "7. Export Data\n";
-        cout << "8. Reset Teller Password\n";
-        cout << "9. Exit Admin Menu\n";
+        cout << "\n=== ADMIN / SYSTEM OPERATIONS ===\n";
+        cout << "1. Create Teller\n";
+        cout << "2. Add Branch\n";
+        cout << "3. Remove Branch\n";
+        cout << "4. View System Logs\n";
+        cout << "5. Apply Interest\n";
+        cout << "6. Backup Data\n";
+        cout << "7. Recover Data\n";
+        cout << "8. Export Data\n";
+        cout << "9. Reset Teller Password\n";
+        cout << "10. Back\n";
 
         choice = get_int("Choice: ");
 
-        if (choice == 1) add_branch();
-        else if (choice == 2) remove_branch();
-        else if (choice == 3) view_system_logs();
-        else if (choice == 4) apply_interest();
-        else if (choice == 5) backup_data();
-        else if (choice == 6) recover_data();
-        else if (choice == 7) export_data();
-        else if (choice == 8) reset_teller_password();
-    } while (choice != 9);
+        if (choice == 1) create_teller();
+        else if (choice == 2) add_branch();
+        else if (choice == 3) remove_branch();
+        else if (choice == 4) view_system_logs();
+        else if (choice == 5) apply_interest();
+        else if (choice == 6) backup_data();
+        else if (choice == 7) recover_data();
+        else if (choice == 8) export_data();
+        else if (choice == 9) reset_teller_password();
+    } while (choice != 10);
 }
 
 void main_menu() {
     cout << "\n*** WELCOME TO STANDARD BANK MULTI-BRANCH ***\n";
 
+    // Opening gate: nothing in the system is reachable without logging in first
+    // (assignment req 1.1.1). All teller, admin and customer operations live
+    // behind these logins.
     int choice;
     do {
         cout << "\n=== MAIN MENU ===\n";
-        cout << "1. Create Teller\n";
-        cout << "2. Teller Login\n";
-        cout << "3. Customer Login\n";
-        cout << "4. View All Branches\n";
-        cout << "5. View Branch Details\n";
-        cout << "6. Inter-Branch Comparison\n";
-        cout << "7. Apply Interest\n";
-        cout << "8. Search Customer\n";
-        cout << "9. Daily Transaction Report\n";
-        cout << "10. Customer Summary\n";
-        cout << "11. Branch Performance\n";
-        cout << "12. Backup Data\n";
-        cout << "13. Recover Data\n";
-        cout << "14. Export Data\n";
-        cout << "15. Admin Menu\n";
-        cout << "16. Exit\n";
+        cout << "1. Teller Login\n";
+        cout << "2. Customer Login\n";
+        cout << "3. Exit\n";
 
         choice = get_int("Choice: ");
 
         if (choice == 1) {
-            create_teller();
-        } else if (choice == 2) {
             string br, tid;
             if (teller_login(br, tid)) {
                 teller_menu(br, tid);
             }
-        } else if (choice == 3) {
+        } else if (choice == 2) {
             string acc = get_line("Account Number: ");
             string pin = get_line("PIN: ");
             if (verify_customer_pin(acc, pin)) {
@@ -192,32 +190,8 @@ void main_menu() {
             } else {
                 cout << "Login failed.\n";
             }
-        } else if (choice == 4) {
-            view_all_branches();
-        } else if (choice == 5) {
-            view_branch_details();
-        } else if (choice == 6) {
-            compare_branches();
-        } else if (choice == 7) {
-            apply_interest();
-        } else if (choice == 8) {
-            search_customer();
-        } else if (choice == 9) {
-            daily_transaction_report();
-        } else if (choice == 10) {
-            customer_summary_report();
-        } else if (choice == 11) {
-            branch_performance_report();
-        } else if (choice == 12) {
-            backup_data();
-        } else if (choice == 13) {
-            recover_data();
-        } else if (choice == 14) {
-            export_data();
-        } else if (choice == 15) {
-            admin_menu();
         }
-    } while (choice != 16);
+    } while (choice != 3);
 
     cout << "Thank you for banking with Standard Bank. Goodbye!\n";
 }

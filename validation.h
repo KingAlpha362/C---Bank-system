@@ -7,6 +7,7 @@
 
 #include <string>
 
+bool validate_full_name(const std::string& name);  // requires first name + surname
 bool validate_phone(const std::string& phone);
 bool validate_pin(const std::string& pin);
 bool validate_date_format(const std::string& d);

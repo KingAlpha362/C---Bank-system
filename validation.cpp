@@ -7,6 +7,22 @@
 
 using namespace std;
 
+bool validate_full_name(const string& name) {
+    // Require at least two whitespace-separated, non-empty tokens
+    // (first name and surname); extra middle names are allowed.
+    int tokens = 0;
+    bool in_token = false;
+    for (char ch : name) {
+        if (isspace((unsigned char)ch)) {
+            in_token = false;
+        } else if (!in_token) {
+            in_token = true;
+            tokens++;
+        }
+    }
+    return tokens >= 2;
+}
+
 bool validate_phone(const string& phone) {
     return phone.size() == 10 && all_digits(phone);
 }
