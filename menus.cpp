@@ -73,36 +73,48 @@ static void teller_menu(const string& branch_code, const string& teller_id) {
             if (verify_customer_pin(acc, pin)) {
                 CustomerRecord c;
                 if (find_customer(acc, c)) {
-                    cout << "Customer: " << c.full_name << "\n";
-                    cout << "Balance: R" << c.balance << "\n";
-                    int t = get_int("1. Deposit  2. Withdraw\nChoice: ");
-                    if (t == 1) deposit(c, branch_code);
-                    else if (t == 2) withdraw(c, branch_code);
+                    if (string(c.branch_code) != branch_code) {
+                        cout << "Access denied: this customer belongs to another branch.\n";
+                    } else {
+                        cout << "Customer: " << c.full_name << "\n";
+                        cout << "Balance: R" << c.balance << "\n";
+                        int t = get_int("1. Deposit  2. Withdraw\nChoice: ");
+                        if (t == 1) deposit(c, branch_code);
+                        else if (t == 2) withdraw(c, branch_code);
+                    }
                 }
             } else {
                 cout << "PIN verification failed.\n";
             }
         } else if (choice == 3) {
-            search_customer();
+            search_customer(branch_code);  // restricted to this teller's branch
         } else if (choice == 4) {
             string acc = get_line("Enter account number: ");
-            edit_customer_profile(acc, teller_id);
+            CustomerRecord c;
+            if (find_customer(acc, c) && string(c.branch_code) != branch_code)
+                cout << "Access denied: this customer belongs to another branch.\n";
+            else
+                edit_customer_profile(acc, teller_id);
         } else if (choice == 5) {
             string acc = get_line("Enter account number to close: ");
-            close_account(acc, teller_id);
+            CustomerRecord c;
+            if (find_customer(acc, c) && string(c.branch_code) != branch_code)
+                cout << "Access denied: this customer belongs to another branch.\n";
+            else
+                close_account(acc, teller_id);
         } else if (choice == 6) {
             view_all_branches();
         } else if (choice == 7) {
             view_branch_details();
         } else if (choice == 8) {
             int r = get_int("1. Daily Transactions\n2. Customer Summary\n3. Branch Performance\nChoice: ");
-            if (r == 1) daily_transaction_report();
-            else if (r == 2) customer_summary_report();
-            else if (r == 3) branch_performance_report();
+            if (r == 1) daily_transaction_report(branch_code);
+            else if (r == 2) customer_summary_report(branch_code);
+            else if (r == 3) branch_performance_report(branch_code);
         } else if (choice == 9) {
             change_teller_password(teller_id);
         } else if (choice == 10) {
-            reset_customer_pin(teller_id);
+            reset_customer_pin(teller_id, branch_code);
         }
     } while (choice != 11);
 

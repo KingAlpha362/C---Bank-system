@@ -48,15 +48,13 @@ void init_system() {
     ifstream teller_in("tellers.dat", ios::binary);
     if (!teller_in.is_open()) {
         ofstream tfile("tellers.dat", ios::binary);
-        TellerRecord t;
+        Teller t;
         memset(&t, 0, sizeof(t));
         strcpy(t.id, "T001");
         strcpy(t.name, "Default Teller");
         strcpy(t.branch_code, "B001");
         t.is_active = true;
-        string salt = "StandardBank#2024";
-        hash<string> hasher;
-        t.password_hash = hasher(string("1234") + salt);
+        t.set_password("1234");
         tfile.write((char*)&t, sizeof(t));
         tfile.close();
         cout << "Default teller created.\n";

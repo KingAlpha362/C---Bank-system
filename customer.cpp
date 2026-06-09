@@ -12,6 +12,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <stdexcept>
 
 using namespace std;
 
@@ -276,11 +277,16 @@ void close_account(const string& acc_num, const string& teller_id) {
     }
 }
 
-void reset_customer_pin(const string& teller_id) {
+void reset_customer_pin(const string& teller_id, const string& branch_code) {
     string acc_num = get_line("Enter Customer Account Number: ");
     CustomerRecord c;
     if (!find_customer(acc_num, c)) {
         cout << "Account not found.\n";
+        return;
+    }
+
+    if (!branch_code.empty() && string(c.branch_code) != branch_code) {
+        cout << "Access denied: this customer belongs to another branch.\n";
         return;
     }
 
@@ -311,93 +317,91 @@ void reset_customer_pin(const string& teller_id) {
 }
 
 void deposit(CustomerRecord& c, const string& branch_code) {
-    double amt = get_double("Deposit amount: R");
-    c.balance += amt;
-    if (update_customer(c)) {
+    // try-catch validation/error handling (assignment req 1.3.3)
+    try {
+        double amt = get_double("Deposit amount: R");
+        c.balance += amt;
+        if (!update_customer(c)) throw runtime_error("Deposit failed.");
         log_transaction(c.account_number, "DEPOSIT", amt, c.balance, branch_code);
         update_branch_stats(c.branch_code, amt, 0);
         cout << "New balance: R" << c.balance << "\n";
-    } else {
-        cout << "Deposit failed.\n";
+    } catch (const exception& e) {
+        cout << e.what() << "\n";
     }
 }
 
 void withdraw(CustomerRecord& c, const string& branch_code) {
-    double amt = get_double("Withdrawal amount: R");
+    // try-catch validation/error handling (assignment req 1.3.3)
+    try {
+        double amt = get_double("Withdrawal amount: R");
 
-    if (c.account_type == 3) {
-        string today = today_date();
-        if (date_key(today) < date_key(c.fixed_maturity_date)) {
-            char ans;
-            cout << "Early withdrawal penalty will apply. Continue? (y/n): ";
-            cin >> ans;
-            clear_cin();
-            if (tolower((unsigned char)ans) != 'y') return;
-            double penalty = amt * 0.01;
-            amt += penalty;
-            cout << "Total after penalty: R" << amt << "\n";
+        if (c.account_type == 3) {
+            string today = today_date();
+            if (date_key(today) < date_key(c.fixed_maturity_date)) {
+                char ans;
+                cout << "Early withdrawal penalty will apply. Continue? (y/n): ";
+                cin >> ans;
+                clear_cin();
+                if (tolower((unsigned char)ans) != 'y') return;  // user cancelled
+                double penalty = amt * 0.01;
+                amt += penalty;
+                cout << "Total after penalty: R" << amt << "\n";
+            }
         }
-    }
 
-    if (c.account_type == 4 && amt > c.transaction_limit) {
-        cout << "This is above the student transaction limit of R" << c.transaction_limit << "\n";
-        return;
-    }
+        if (c.account_type == 4 && amt > c.transaction_limit) {
+            stringstream ss;
+            ss << "This is above the student transaction limit of R" << c.transaction_limit;
+            throw runtime_error(ss.str());
+        }
 
-    double available = c.balance;
-    if (c.account_type == 2) available += c.overdraft_limit;
-    if (amt > available) {
-        cout << "Not enough money.\n";
-        return;
-    }
+        double available = c.balance;
+        if (c.account_type == 2) available += c.overdraft_limit;
+        if (amt > available) throw runtime_error("Not enough money.");
 
-    c.balance -= amt;
-    if (update_customer(c)) {
+        c.balance -= amt;
+        if (!update_customer(c)) throw runtime_error("Withdrawal failed.");
         log_transaction(c.account_number, "WITHDRAWAL", amt, c.balance, branch_code);
         update_branch_stats(c.branch_code, -amt, 0);
         cout << "New balance: R" << c.balance << "\n";
         if (c.account_type == 2 && c.balance < 0) {
             cout << "Cheque overdraft used. Monthly fee: R" << c.monthly_fee << "\n";
         }
-    } else {
-        cout << "Withdrawal failed.\n";
+    } catch (const exception& e) {
+        cout << e.what() << "\n";
     }
 }
 
 void transfer(CustomerRecord& from, const string& branch_code) {
-    string to_acc = get_line("Recipient account number: ");
-    CustomerRecord to;
+    // try-catch validation/error handling (assignment req 1.3.3)
+    try {
+        string to_acc = get_line("Recipient account number: ");
+        CustomerRecord to;
 
-    if (!find_customer(to_acc, to)) {
-        cout << "Recipient not found.\n";
-        return;
-    }
+        if (!find_customer(to_acc, to)) throw runtime_error("Recipient not found.");
 
-    double amt = get_double("Amount to transfer: R");
+        double amt = get_double("Amount to transfer: R");
 
-    if (from.account_type == 4 && amt > from.transaction_limit) {
-        cout << "Above student transaction limit.\n";
-        return;
-    }
+        if (from.account_type == 4 && amt > from.transaction_limit)
+            throw runtime_error("Above student transaction limit.");
 
-    double available = from.balance;
-    if (from.account_type == 2) available += from.overdraft_limit;
-    if (amt > available) {
-        cout << "Not enough money.\n";
-        return;
-    }
+        double available = from.balance;
+        if (from.account_type == 2) available += from.overdraft_limit;
+        if (amt > available) throw runtime_error("Not enough money.");
 
-    from.balance -= amt;
-    to.balance += amt;
+        from.balance -= amt;
+        to.balance += amt;
 
-    if (update_customer(from) && update_customer(to)) {
+        if (!update_customer(from) || !update_customer(to))
+            throw runtime_error("Transfer failed.");
+
         log_transaction(from.account_number, "TRANSFER OUT", amt, from.balance, branch_code);
         log_transaction(to.account_number, "TRANSFER IN", amt, to.balance, to.branch_code);
         update_branch_stats(from.branch_code, -amt, 0);
         update_branch_stats(to.branch_code, amt, 0);
         cout << "Transfer done.\n";
-    } else {
-        cout << "Transfer failed.\n";
+    } catch (const exception& e) {
+        cout << e.what() << "\n";
     }
 }
 
@@ -451,7 +455,7 @@ void change_pin(CustomerRecord& c) {
     else cout << "Could not update PIN.\n";
 }
 
-void search_customer() {
+void search_customer(const string& branch_filter) {
     string term = lower_str(get_line("Search by account, name, ID, or phone: "));
 
     ifstream file("customers.dat", ios::binary);
@@ -463,6 +467,7 @@ void search_customer() {
     CustomerRecord c;
     bool found = false;
     while (file.read((char*)&c, sizeof(c))) {
+        if (!branch_filter.empty() && string(c.branch_code) != branch_filter) continue;
         string acc = lower_str(string(c.account_number));
         string name = lower_str(string(c.full_name));
         string id = lower_str(string(c.sa_id));
@@ -481,7 +486,7 @@ void search_customer() {
     if (!found) cout << "Nothing matched.\n";
 }
 
-void customer_summary_report() {
+void customer_summary_report(const string& branch_filter) {
     ifstream file("customers.dat", ios::binary);
     if (!file) {
         cout << "No customer data.\n";
@@ -494,6 +499,7 @@ void customer_summary_report() {
     double total = 0.0;
 
     while (file.read((char*)&c, sizeof(c))) {
+        if (!branch_filter.empty() && string(c.branch_code) != branch_filter) continue;
         string type;
         if (c.account_type == 1) type = "Savings";
         else if (c.account_type == 2) type = "Cheque";
@@ -510,7 +516,7 @@ void customer_summary_report() {
     cout << "Total balance: R" << total << "\n";
 }
 
-void daily_transaction_report() {
+void daily_transaction_report(const string& branch_filter) {
     ifstream file("transactions.dat", ios::binary);
     if (!file) {
         cout << "No transactions found.\n";
@@ -524,6 +530,7 @@ void daily_transaction_report() {
 
     cout << "\n=== DAILY TRANSACTION REPORT (" << today << ") ===\n";
     while (file.read((char*)&t, sizeof(t))) {
+        if (!branch_filter.empty() && string(t.branch_code) != branch_filter) continue;
         string dt = string(t.date);
         if (dt.size() >= 10 && dt.substr(0, 10) == today) {
             cout << t.date << " | " << t.account_number << " | " << t.type << " | R" << t.amount << " | Branch " << t.branch_code << "\n";

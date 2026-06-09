@@ -12,13 +12,22 @@
 
 #include <ctime>    // time_t
 #include <cstddef>  // size_t
+#include <string>
 
-struct TellerRecord {
+// Teller is a standard-layout class (all members public, no virtuals) so it can
+// still be written/read directly to tellers.dat with the same byte layout the
+// original struct used. The two helper methods encapsulate password hashing;
+// they are defined in teller.cpp.
+class Teller {
+public:
     char id[10];
     char name[50];
     size_t password_hash;
     char branch_code[10];
     bool is_active;
+
+    void set_password(const std::string& plain);          // hash + store
+    bool check_password(const std::string& plain) const;  // compare against stored hash
 };
 
 struct BranchRecord {

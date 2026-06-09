@@ -22,4 +22,5 @@ void remove_branch();
 void view_all_branches();
 void view_branch_details();
 void compare_branches();
-void branch_performance_report();
+// branch_filter (when non-empty) reports on that single branch only.
+void branch_performance_report(const std::string& branch_filter = "");

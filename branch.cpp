@@ -147,11 +147,12 @@ void compare_branches() {
     cout << "Highest deposits: " << branches[best].name << " (" << branches[best].code << ") with R" << branches[best].total_balance << "\n";
 }
 
-void branch_performance_report() {
+void branch_performance_report(const string& branch_filter) {
     vector<BranchRecord> branches = load_branches();
     cout << "\n=== BRANCH PERFORMANCE REPORT ===\n";
     for (size_t i = 0; i < branches.size(); i++) {
         if (!branches[i].is_active) continue;
+        if (!branch_filter.empty() && string(branches[i].code) != branch_filter) continue;
         cout << branches[i].name << " (" << branches[i].code << ")\n";
         cout << "Address: " << branches[i].address << "\n";
         cout << "Total balance: R" << branches[i].total_balance << "\n";
