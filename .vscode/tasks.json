@@ -7,9 +7,18 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
+                "-std=c++17",
+                "${fileDirname}\\main.cpp",
+                "${fileDirname}\\utils.cpp",
+                "${fileDirname}\\validation.cpp",
+                "${fileDirname}\\accounts.cpp",
+                "${fileDirname}\\branch.cpp",
+                "${fileDirname}\\customer.cpp",
+                "${fileDirname}\\teller.cpp",
+                "${fileDirname}\\admin.cpp",
+                "${fileDirname}\\menus.cpp",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${fileDirname}\\bank.exe"
             ],
             "options": {
                 "cwd": "${fileDirname}"

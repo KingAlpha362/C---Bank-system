@@ -9,22 +9,38 @@ MULTI-BRANCH BANKING MANAGEMENT SYSTEM (C++)
 * C++ Compiler (g++, CodeBlocks, or Visual Studio)
 * Works on Windows, Linux, or macOS
 
-2. HOW TO COMPILE AND RUN
+2. PROJECT STRUCTURE
 
 ---
 
-Make sure the file is named:
-standard_bank_beginner_style.cpp
+The program is split into separate modules instead of one large file:
 
-Using g++:
-g++ standard_bank_beginner_style.cpp -o bank.exe
-./bank.exe     (or just bank.exe on Windows)
+records.h                 - shared data structures (written to the .dat files)
+utils.h / .cpp            - input, string, date, config and logging helpers
+validation.h / .cpp       - field validators (SA ID, phone, email, PIN, date)
+accounts.h / .cpp         - account-type rules (Savings/Cheque/Fixed/Student)
+branch.h / .cpp           - branch storage, admin and branch reports
+customer.h / .cpp         - customer storage, transactions and customer reports
+teller.h / .cpp           - teller creation, login and password management
+admin.h / .cpp            - setup, interest, backup/recover, export, logs
+menus.h / .cpp            - console menu loops (main / customer / teller / admin)
+main.cpp                  - entry point (init_system then main_menu)
+Makefile                  - builds everything into bank.exe
 
-Using Visual Studio:
+3. HOW TO COMPILE AND RUN
 
-* Create a Console App project
-* Replace main.cpp with this file
-* Run (Ctrl + F5)
+---
+
+Using make (recommended):
+    make
+    ./bank.exe     (or just bank.exe on Windows)
+
+Using g++ directly:
+    g++ -std=c++17 *.cpp -o bank.exe
+    ./bank.exe
+
+Using VS Code:
+    Press the Build button (the task compiles all .cpp files into bank.exe).
 
 NOTE:
 The program will automatically create required files (.dat, .txt) in the same folder.
